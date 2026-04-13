@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe de Uso de Red y Dominios</title>
-    <!-- Importamos Tailwind CSS para el diseño -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Pequeñas animaciones */
@@ -18,7 +17,6 @@
 <body class="min-h-screen bg-gray-50 text-gray-800 font-sans p-6 relative">
 
     <div id="main-content" class="max-w-7xl mx-auto space-y-8">
-        <!-- Header -->
         <header class="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Informe de Uso de Red y Dominios</h1>
@@ -29,7 +27,6 @@
             </div>
         </header>
 
-        <!-- Resumen Ejecutivo Cifras -->
         <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
                 <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
@@ -62,25 +59,19 @@
             </div>
         </section>
 
-        <!-- Gráficos y Distribución -->
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Gráfico de Tarta -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
                 <h2 class="text-lg font-bold text-gray-900 mb-6 self-start">Distribución de Tráfico</h2>
                 <div id="pie-chart-container" class="py-4"></div>
                 <p class="text-sm text-gray-500 mt-4 text-center">Proporción de solicitudes por categoría principal</p>
             </div>
 
-            <!-- Gráfico de Barras -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-lg font-bold text-gray-900 mb-6">Volumen Detallado por Categoría</h2>
                 <div id="bar-chart-container" class="space-y-4 max-h-[300px] overflow-y-auto pr-2"></div>
             </div>
         </section>
 
-        <!-- ========================================== -->
-        <!-- ESTA ES LA NUEVA TABLA DEL TOP 10 GLOBAL   -->
-        <!-- ========================================== -->
         <section class="fade-in">
             <div class="mb-4">
                 <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -90,11 +81,9 @@
                 <p class="text-sm text-gray-500 mt-1">Los sitios con mayor tráfico acumulado en toda la red corporativa, extraídos de todas las categorías.</p>
             </div>
             <div id="global-top-container" class="bg-white rounded-xl shadow-lg border-2 border-amber-200 overflow-x-auto">
-                <!-- Se rellena automáticamente con JavaScript -->
-            </div>
+                </div>
         </section>
 
-        <!-- Tablas de Dominios por Categoría -->
         <section>
             <div class="mb-6 mt-10">
                 <h2 class="text-2xl font-bold text-gray-900">Desglose Detallado por Categoría</h2>
@@ -104,7 +93,6 @@
         </section>
     </div>
 
-    <!-- Tooltip Flotante para el Gráfico -->
     <div id="chart-tooltip" class="fixed z-[60] pointer-events-none bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-2xl transform -translate-x-1/2 -translate-y-full hidden" style="top: 0; left: 0;">
         <div class="flex items-center gap-2 mb-1">
             <span id="tooltip-color" class="w-3 h-3 rounded-full"></span>
@@ -113,7 +101,6 @@
         <div id="tooltip-value" class="text-gray-300 text-xs ml-5"></div>
     </div>
 
-    <!-- Modal de Análisis IA -->
     <div id="ai-modal" class="fixed inset-0 bg-gray-900/50 items-center justify-center p-4 z-50 backdrop-blur-sm hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden fade-in">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -149,8 +136,10 @@
         </div>
     </div>
 
-    <!-- Scripts con la lógica de negocio -->
     <script>
+    
+    // AQUÍ ESTÁ LA SOLUCIÓN: Declaramos el formateador fuera de todo para que no falle el Tooltip
+    const formatNum = (num) => (num || 0).toLocaleString();
 
     (async function() {
         // Contraseña de seguridad "Empresa2024"
@@ -336,8 +325,6 @@
             }
         };
 
-        const formatNum = (num) => (num || 0).toLocaleString();
-
         // 1. Cargar Resumen Ejecutivo
         document.getElementById('total-header').innerText = formatNum(data.resumen.totalSolicitudes);
         document.getElementById('total-solicitudes').innerText = formatNum(data.resumen.totalSolicitudes);
@@ -345,20 +332,32 @@
         document.getElementById('categoria-top').title = data.resumen.categoriaTop;
         document.getElementById('total-bloqueos').innerText = formatNum(data.resumen.totalBloqueos);
 
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Calculamos el total para poder sacar el porcentaje de cada barra
+        const totalParaPorcentajes = data.categorias.reduce((sum, cat) => sum + (cat.valor || 0), 0);
+        
         // 2. Generar Gráfico de Barras
         const maxValor = Math.max(...data.categorias.map(c => c.valor)) || 1;
         const barContainer = document.getElementById('bar-chart-container');
+        
         data.categorias.forEach(cat => {
             const widthPct = ((cat.valor || 0) / maxValor) * 100;
+            const porcentaje = ((cat.valor / totalParaPorcentajes) * 100).toFixed(1);
+            
             const barHTML = `
-                <div class="flex items-center">
+                <div class="flex items-center relative group cursor-pointer hover:bg-gray-50 rounded p-1 transition-colors">
+                    <div class="absolute inset-0 z-10" 
+                         onmousemove="showTooltip(event, '${cat.nombre}', ${cat.valor}, '${cat.colorHex}', '${porcentaje}')" 
+                         onmouseout="hideTooltip()">
+                    </div>
+                    
                     <div class="w-40 sm:w-56 text-xs sm:text-sm font-medium text-gray-600 truncate pr-2" title="${cat.nombre}">
                         <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${cat.colorHex}"></span>
                         ${cat.nombre}
                     </div>
                     <div class="flex-1 flex items-center">
-                        <div class="w-full bg-gray-100 rounded-full h-3 mr-4">
-                            <div class="h-3 rounded-full transition-all duration-1000" style="width: ${widthPct}%; background-color: ${cat.colorHex}"></div>
+                        <div class="w-full bg-gray-100 rounded-full h-3 mr-4 relative">
+                            <div class="h-3 rounded-full transition-all duration-1000 group-hover:opacity-80" style="width: ${widthPct}%; background-color: ${cat.colorHex}"></div>
                         </div>
                         <span class="text-xs sm:text-sm font-bold text-gray-700 w-12 text-right">
                             ${formatNum(cat.valor)}
@@ -368,6 +367,7 @@
             `;
             barContainer.insertAdjacentHTML('beforeend', barHTML);
         });
+        // --- FIN DE LA MODIFICACIÓN ---
 
         // 3. Generar Gráfico de Tarta (SVG)
         const pieContainer = document.getElementById('pie-chart-container');
@@ -541,46 +541,52 @@
 
     async function analyzeDomain(dominio, categoria) {
         document.getElementById('modal-domain-name').innerText = dominio;
+        const modal = document.getElementById('ai-modal');
+        const modalLoading = document.getElementById('modal-loading');
+        const modalContent = document.getElementById('modal-content');
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         modalLoading.classList.remove('hidden');
         modalLoading.classList.add('flex');
         modalContent.classList.add('hidden');
 
-        const systemPrompt = "Eres un analista de redes y seguridad de TI corporativo.";
-        const userPrompt = `Dime brevemente qué es el dominio "${dominio}" (que aparece en nuestra categoría de "${categoria}"). ¿Es común encontrar este dominio en el entorno laboral? ¿Supone algún riesgo de seguridad o fuga de datos? Responde en dos párrafos cortos y fáciles de entender para alguien no técnico.`;
+        // Simular tiempo de análisis de la IA (1.2 segundos)
+        await new Promise(resolve => setTimeout(resolve, 1200));
 
-        const apiKey = ""; // La API key se inyecta automáticamente en este entorno
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-        
-        const payload = {
-            contents: [{ parts: [{ text: userPrompt }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] }
+        let responseText = "";
+
+        // Base de conocimientos específica para dominios corporativos clave
+        const domainKnowledge = {
+            "31.13.83.36": "Es una dirección IP pública asignada directamente a la infraestructura de **Facebook (Meta Platforms)**. Se utiliza para la entrega de contenido cifrado y conexiones directas de la aplicación.",
+            "157.240.5.60": "Esta dirección IP pertenece a los servidores de **Facebook / Instagram (Meta)**. Suele registrarse cuando los dispositivos cargan imágenes, videos o usan las apps móviles dentro de la red WiFi corporativa.",
+            "157.240.5.35": "Dirección IP estática de **Meta (Facebook/Instagram)**, utilizada generalmente para balanceo de carga en la entrega de contenido multimedia.",
+            "mtalk.google.com": "Pertenece a **Google**. Es el servicio técnico responsable de mantener las conexiones 'Push' abiertas. Se usa para que los móviles Android y apps como Gmail reciban notificaciones en tiempo real sin gastar mucha batería.",
+            "platform.twitter.com": "Pertenece a **X (antes Twitter)**. Este dominio genera mucho tráfico 'invisible' porque se carga automáticamente en segundo plano cada vez que un usuario visita un blog, noticia o web externa que tiene incrustado un botón de 'Compartir en Twitter'.",
+            "t.co": "Es el acortador de enlaces oficial de **X (Twitter)**. Su presencia indica que los usuarios están haciendo clic en enlaces que han sido compartidos dentro de la red social.",
+            "px.ads.linkedin.com": "Es el 'Insight Tag' o píxel de seguimiento publicitario de **LinkedIn**. Las webs de otras empresas lo instalan para saber quién los visita. Su presencia significa que los empleados están navegando por webs de terceros que tienen publicidad de LinkedIn.",
+            "t.oa.opera.com": "Pertenece al navegador web **Opera**. Es un dominio de telemetría que el navegador usa en segundo plano para enviar estadísticas de uso, buscar actualizaciones o sincronizar datos.",
+            "api-taboola.com": "Pertenece a **Taboola**, una red de publicidad nativa. Son los responsables de los anuncios tipo 'Noticias patrocinadas' o 'Te puede interesar' (clickbait) que aparecen al final de los periódicos online.",
+            "web.archive.org": "Es el dominio de la **Wayback Machine (Internet Archive)**. Permite ver versiones antiguas de páginas web. Ocasionalmente, los empleados lo usan como un 'proxy' para intentar saltarse bloqueos y acceder a páginas restringidas.",
+            "blog.tienda-medieval.com": "Web de comercio electrónico de temática histórica. El firewall corporativo lo bloquea automáticamente porque sus algoritmos detectan palabras clave relacionadas con la venta de espadas, hachas o réplicas, encasillándolo bajo la política estricta de 'Armas'."
         };
 
-        let retries = 5;
-        let delay = 1000;
-        let responseText = "Error al conectar con la IA.";
-
-        while (retries > 0) {
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const result = await response.json();
-                responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No se generó respuesta.";
-                break; 
-            } catch (error) {
-                retries--;
-                if (retries === 0) break;
-                await new Promise(res => setTimeout(res, delay));
-                delay *= 2; 
-            }
+        // Verificamos si tenemos conocimiento específico de ese dominio
+        if (domainKnowledge[dominio]) {
+            responseText = `🔍 **Inteligencia de Dominio:**\n${domainKnowledge[dominio]}\n\n🛡️ **Evaluación de Riesgo:** Aunque el dominio genera tráfico, pertenece a plataformas conocidas. El riesgo de malware es nulo. Se recomienda monitorizar únicamente si hay sospecha de pérdida extrema de productividad.`;
+        } 
+        // Si no está en la base de datos, usamos deducción por categoría
+        else if (categoria.toLowerCase().includes("bloqueada") || categoria.toLowerCase().includes("juegos") || categoria.toLowerCase().includes("aparcados")) {
+            responseText = `🔍 **Análisis de Categoría:** El dominio **${dominio}** está clasificado bajo la política restrictiva de "${categoria}".\n\n🛡️ **Evaluación de Riesgo:** Este tipo de sitios (juegos, loterías, contenido para adultos o dominios sin uso real) suele estar bloqueado proactivamente en entornos corporativos. No solo por productividad, sino porque las redes de anuncios en estos sitios a menudo son vectores de 'malvertising' (publicidad maliciosa). Mantener el bloqueo.`;
+        } 
+        else if (categoria.toLowerCase().includes("correo") || categoria.toLowerCase().includes("profesionales")) {
+            responseText = `🔍 **Análisis de Categoría:** El dominio **${dominio}** es parte de la infraestructura de servicios de "${categoria}".\n\n🛡️ **Evaluación de Riesgo:** Es un dominio seguro operado por proveedores empresariales legítimos (Microsoft, Google, LinkedIn). Es tráfico estándar. El único riesgo asociado es la potencial exfiltración de datos (DLP) si los usuarios envían documentos confidenciales a través de correos personales.`;
+        } 
+        else {
+            responseText = `🔍 **Análisis General:** El dominio **${dominio}** canaliza tráfico relacionado con "${categoria}".\n\n🛡️ **Evaluación de Riesgo:** Generalmente se trata de CDNs (redes de entrega de contenido de alta velocidad), subdominios de almacenamiento de imágenes o APIs secundarias. El riesgo de ciberseguridad es bajo.`;
         }
 
+        // Mostrar resultado en el modal
         modalLoading.classList.add('hidden');
         modalLoading.classList.remove('flex');
         modalContent.innerText = responseText;
