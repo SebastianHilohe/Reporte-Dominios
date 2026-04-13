@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Uso de Red y Dominios</title>
+    <!-- Importamos Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Pequeñas animaciones */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #main-content { display: none; } /* Oculto hasta validar contraseña */
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800 font-sans p-6 relative">
+
+    <div id="main-content" class="max-w-7xl mx-auto space-y-8">
+        <!-- Header -->
+        <header class="border-b border-gray-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Informe de Uso de Red y Dominios</h1>
+                <p class="text-gray-500 mt-2">Análisis de tráfico web de empleados basado en registros del firewall</p>
+            </div>
+            <div class="text-sm font-medium text-gray-400 bg-white px-3 py-1 rounded-md border border-gray-200 shadow-sm self-start md:self-auto">
+                <span id="total-header"></span> Registros Analizados (Últimos 3 meses)
+            </div>
+        </header>
+
+        <!-- Resumen Ejecutivo Cifras -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Total Solicitudes Web</p>
+                    <p id="total-solicitudes" class="text-2xl font-bold text-gray-900"></p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Categoría Principal</p>
+                    <p id="categoria-top" class="text-xl font-bold text-gray-900 truncate w-48 sm:w-auto" title="Correo electrónico basado en web"></p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                <div class="p-3 bg-red-100 text-red-600 rounded-lg">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 font-medium">Bloqueos de Seguridad</p>
+                    <p id="total-bloqueos" class="text-2xl font-bold text-red-600"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gráficos y Distribución -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gráfico de Tarta -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                <h2 class="text-lg font-bold text-gray-900 mb-6 self-start">Distribución de Tráfico</h2>
+                <div id="pie-chart-container" class="py-4"></div>
+                <p class="text-sm text-gray-500 mt-4 text-center">Proporción de solicitudes por categoría principal</p>
+            </div>
+
+            <!-- Gráfico de Barras -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-lg font-bold text-gray-900 mb-6">Volumen Detallado por Categoría</h2>
+                <div id="bar-chart-container" class="space-y-4 max-h-[300px] overflow-y-auto pr-2"></div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- ESTA ES LA NUEVA TABLA DEL TOP 10 GLOBAL   -->
+        <!-- ========================================== -->
+        <section class="fade-in">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span class="bg-amber-100 text-amber-600 p-2 rounded-lg">🏆</span>
+                    Ranking Global: Top 10 Dominios más buscados
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">Los sitios con mayor tráfico acumulado en toda la red corporativa, extraídos de todas las categorías.</p>
+            </div>
+            <div id="global-top-container" class="bg-white rounded-xl shadow-lg border-2 border-amber-200 overflow-x-auto">
+                <!-- Se rellena automáticamente con JavaScript -->
+            </div>
+        </section>
+
+        <!-- Tablas de Dominios por Categoría -->
+        <section>
+            <div class="mb-6 mt-10">
+                <h2 class="text-2xl font-bold text-gray-900">Desglose Detallado por Categoría</h2>
+                <p class="text-sm text-gray-500">Haz clic en el botón ✨ junto a cualquier dominio para analizarlo con IA.</p>
+            </div>
+            <div id="tables-container" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </section>
+    </div>
+
+    <!-- Tooltip Flotante para el Gráfico -->
+    <div id="chart-tooltip" class="fixed z-[60] pointer-events-none bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-2xl transform -translate-x-1/2 -translate-y-full hidden" style="top: 0; left: 0;">
+        <div class="flex items-center gap-2 mb-1">
+            <span id="tooltip-color" class="w-3 h-3 rounded-full"></span>
+            <span id="tooltip-name" class="font-bold"></span>
+        </div>
+        <div id="tooltip-value" class="text-gray-300 text-xs ml-5"></div>
+    </div>
+
+    <!-- Modal de Análisis IA -->
+    <div id="ai-modal" class="fixed inset-0 bg-gray-900/50 items-center justify-center p-4 z-50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden fade-in">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    Análisis de Dominio <span>✨</span>
+                </h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Objetivo</span>
+                    <p id="modal-domain-name" class="text-xl font-mono text-gray-800 break-all"></p>
+                </div>
+                
+                <div class="bg-indigo-50/50 rounded-lg p-4 min-h-[120px]">
+                    <div id="modal-loading" class="flex flex-col items-center justify-center h-full space-y-3 text-indigo-500">
+                        <svg class="spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-sm font-medium">Investigando dominio en internet...</p>
+                    </div>
+                    <div id="modal-content" class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap hidden"></div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 text-right border-t border-gray-100">
+                <button onclick="closeModal()" class="bg-gray-800 hover:bg-gray-900 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition-colors text-sm">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts con la lógica de negocio -->
+    <script>
+
+    (async function() {
+        // Contraseña de seguridad "Empresa2024"
+        const hashAlmacenado = "132f1299fae929b64050ac59090b33b328b72df04b8e4c1c2ce2185db27817f2"; 
+        const fallbackEncoded = "RW1wcmVzYTIwMjQ="; // Fallback para cuando abres en modo local (file://)
+
+        async function validar() {
+            const password = prompt("Introduce la contraseña para ver el informe:");
+            if (!password) {
+                document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>Acceso denegado</h1>";
+                return;
+            }
+
+            let esValida = false;
+
+            try {
+                // Modo web (GitHub/Vercel): Usa seguridad criptográfica avanzada
+                if (window.crypto && window.crypto.subtle) {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(password);
+                    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    esValida = (hashHex === hashAlmacenado);
+                } else {
+                    // Modo local (Doble clic en tu ordenador): Usa seguridad básica para evitar que el navegador lo bloquee
+                    esValida = (btoa(password) === fallbackEncoded);
+                }
+            } catch (e) {
+                esValida = (password === "Empresa2024");
+            }
+
+            if (!esValida) {
+                alert("Contraseña incorrecta.");
+                document.body.innerHTML = "<h1 style='text-align:center;margin-top:50px;'>Acceso denegado</h1>";
+                window.stop();
+            } else {
+                document.getElementById('main-content').style.display = "block";
+                generarInforme(); // LLamamos a la función para construir todo
+            }
+        }
+
+        await validar();
+    })();
+
+    // Lógica para construir la web
+    function generarInforme() {
+        // Datos proporcionados
+        const data = {
+            resumen: {
+                totalSolicitudes: 43655,
+                totalBloqueos: 507,
+                categoriaTop: "Correo electrónico basado en web",
+            },
+            categorias: [
+                { nombre: "Correo electrónico basado en web", valor: 12433, colorHex: "#3b82f6" },
+                { nombre: "Transmisión multimedia por secuencias y descargas", valor: 9440, colorHex: "#6366f1" },
+                { nombre: "Redes sociales", valor: 8808, colorHex: "#0ea5e9" },
+                { nombre: "Mensajería instantánea", valor: 5999, colorHex: "#14b8a6" },
+                { nombre: "Redes profesionales", valor: 5347, colorHex: "#06b6d4" },
+                { nombre: "Descargar sitios", valor: 737, colorHex: "#9ca3af" },
+                { nombre: "Juegos", valor: 718, colorHex: "#9ca3af" },
+                { nombre: "Otros (Aparcados, Recientes...)", valor: 161, colorHex: "#d1d5db" },
+                { nombre: "Armas (Bloqueado)", valor: 10, colorHex: "#ef4444" },
+                { nombre: "Pornografía (Bloqueado)", valor: 2, colorHex: "#dc2626" },
+            ],
+            topDominios: {
+                "Correo electrónico basado en web": [
+                    { dominio: "outlook.office.com", solicitudes: 8699, bloqueos: 0 },
+                    { dominio: "mail.google.com", solicitudes: 2178, bloqueos: 0 },
+                    { dominio: "outlook.live.com", solicitudes: 330, bloqueos: 0 },
+                    { dominio: "outlook.office365.com", solicitudes: 263, bloqueos: 0 },
+                    { dominio: "mail-attachment.googleusercontent.com", solicitudes: 154, bloqueos: 0 },
+                    { dominio: "hostalia.webmail.es", solicitudes: 115, bloqueos: 0 },
+                    { dominio: "ppj05.cdnwebcloud.com", solicitudes: 96, bloqueos: 0 },
+                    { dominio: "bucket.cdnwebcloud.com", solicitudes: 72, bloqueos: 0 },
+                    { dominio: "ci3.googleusercontent.com", solicitudes: 68, bloqueos: 0 },
+                    { dominio: "www.gmail.com", solicitudes: 51, bloqueos: 0 }
+                ],
+                "Transmisión multimedia por secuencias y descargas": [
+                    { dominio: "www.youtube.com", solicitudes: 3449, bloqueos: 0 },
+                    { dominio: "i.ytimg.com", solicitudes: 797, bloqueos: 0 },
+                    { dominio: "geo.dailymotion.com", solicitudes: 408, bloqueos: 0 },
+                    { dominio: "accounts.youtube.com", solicitudes: 278, bloqueos: 0 },
+                    { dominio: "player.vimeo.com", solicitudes: 236, bloqueos: 0 },
+                    { dominio: "open.spotify.com", solicitudes: 203, bloqueos: 0 },
+                    { dominio: "i.imgur.com", solicitudes: 193, bloqueos: 0 },
+                    { dominio: "feda.tcualifica.com", solicitudes: 166, bloqueos: 0 },
+                    { dominio: "i1.ytimg.com", solicitudes: 161, bloqueos: 0 },
+                    { dominio: "www.dailymotion.com", solicitudes: 133, bloqueos: 0 }
+                ],
+                "Redes sociales": [
+                    { dominio: "platform.twitter.com", solicitudes: 1714, bloqueos: 0 },
+                    { dominio: "31.13.83.36", solicitudes: 1220, bloqueos: 0 },
+                    { dominio: "www.facebook.com", solicitudes: 569, bloqueos: 0 },
+                    { dominio: "www.instagram.com", solicitudes: 551, bloqueos: 0 },
+                    { dominio: "157.240.5.60", solicitudes: 393, bloqueos: 0 },
+                    { dominio: "157.240.5.35", solicitudes: 383, bloqueos: 0 },
+                    { dominio: "t.co", solicitudes: 322, bloqueos: 0 },
+                    { dominio: "ct.pinterest.com", solicitudes: 299, bloqueos: 0 },
+                    { dominio: "tr.snapchat.com", solicitudes: 239, bloqueos: 0 },
+                    { dominio: "connect.facebook.net", solicitudes: 232, bloqueos: 0 }
+                ],
+                "Mensajería instantánea": [
+                    { dominio: "mtalk.google.com", solicitudes: 3610, bloqueos: 0 },
+                    { dominio: "web.whatsapp.com", solicitudes: 1233, bloqueos: 0 },
+                    { dominio: "dit.whatsapp.net", solicitudes: 349, bloqueos: 0 },
+                    { dominio: "chat.google.com", solicitudes: 321, bloqueos: 0 },
+                    { dominio: "static.whatsapp.net", solicitudes: 120, bloqueos: 0 },
+                    { dominio: "flows.whatsapp.net", solicitudes: 89, bloqueos: 0 },
+                    { dominio: "web.telegram.org", solicitudes: 47, bloqueos: 0 },
+                    { dominio: "secure.livechatinc.com", solicitudes: 26, bloqueos: 0 },
+                    { dominio: "www.whatsapp.com", solicitudes: 24, bloqueos: 0 },
+                    { dominio: "pps.whatsapp.net", solicitudes: 21, bloqueos: 0 }
+                ],
+                "Redes profesionales": [
+                    { dominio: "www.linkedin.com", solicitudes: 1895, bloqueos: 0 },
+                    { dominio: "px.ads.linkedin.com", solicitudes: 1121, bloqueos: 0 },
+                    { dominio: "merchantpool1.linkedin.com", solicitudes: 553, bloqueos: 0 },
+                    { dominio: "rtb.linkedin.com", solicitudes: 303, bloqueos: 0 },
+                    { dominio: "es.linkedin.com", solicitudes: 238, bloqueos: 0 },
+                    { dominio: "platform.linkedin.com", solicitudes: 230, bloqueos: 0 },
+                    { dominio: "rtb-us-east.linkedin.com", solicitudes: 166, bloqueos: 0 },
+                    { dominio: "rtb-trk4.linkedin.com", solicitudes: 157, bloqueos: 0 },
+                    { dominio: "rum15.perf.linkedin.com", solicitudes: 95, bloqueos: 0 },
+                    { dominio: "rum3.perf.linkedin.com", solicitudes: 95, bloqueos: 0 }
+                ],
+                "Descargar sitios": [
+                    { dominio: "t.oa.opera.com", solicitudes: 523, bloqueos: 0 },
+                    { dominio: "www.removepaywall.com", solicitudes: 41, bloqueos: 0 },
+                    { dominio: "addons.mozilla.org", solicitudes: 25, bloqueos: 0 },
+                    { dominio: "chrome.google.com", solicitudes: 17, bloqueos: 0 },
+                    { dominio: "chromewebstore.google.com", solicitudes: 17, bloqueos: 0 },
+                    { dominio: "dl.google.com", solicitudes: 16, bloqueos: 0 },
+                    { dominio: "px.oa.opera.com", solicitudes: 14, bloqueos: 0 },
+                    { dominio: "code.visualstudio.com", solicitudes: 7, bloqueos: 0 },
+                    { dominio: "download.microsoft.com", solicitudes: 5, bloqueos: 0 },
+                    { dominio: "t-odx.op-mobile.opera.com", solicitudes: 5, bloqueos: 0 }
+                ],
+                "Juegos": [
+                    { dominio: "www1.juegosonce.es", solicitudes: 138, bloqueos: 138 },
+                    { dominio: "www.loteriasyapuestas.es", solicitudes: 107, bloqueos: 107 },
+                    { dominio: "juegos.loteriasyapuestas.es", solicitudes: 105, bloqueos: 105 },
+                    { dominio: "www.juegosonce.es", solicitudes: 39, bloqueos: 39 },
+                    { dominio: "svgs.scryfall.io", solicitudes: 24, bloqueos: 0 },
+                    { dominio: "cds.loteriasyapuestas.es", solicitudes: 23, bloqueos: 23 },
+                    { dominio: "static.futbolfantasy.com", solicitudes: 17, bloqueos: 0 },
+                    { dominio: "edhrec.com", solicitudes: 15, bloqueos: 0 },
+                    { dominio: "www.flashscore.es", solicitudes: 14, bloqueos: 14 },
+                    { dominio: "www.wikidex.net", solicitudes: 14, bloqueos: 0 }
+                ],
+                "Dominios aparcados": [
+                    { dominio: "web.archive.org", solicitudes: 63, bloqueos: 63 },
+                    { dominio: "static.qualif.io", solicitudes: 16, bloqueos: 0 },
+                    { dominio: "core-api-frontendlogger.front.vpgrp.net", solicitudes: 7, bloqueos: 0 },
+                    { dominio: "pastelerialamallorquina.es", solicitudes: 6, bloqueos: 0 },
+                    { dominio: "rybbit.xzist.org", solicitudes: 3, bloqueos: 3 },
+                    { dominio: "172.67.69.234", solicitudes: 3, bloqueos: 3 },
+                    { dominio: "gunft.com", solicitudes: 3, bloqueos: 0 },
+                    { dominio: "sac.ayads.co", solicitudes: 2, bloqueos: 0 },
+                    { dominio: "bankinter.contigomas.com", solicitudes: 2, bloqueos: 0 },
+                    { dominio: "granjacuentos.com", solicitudes: 2, bloqueos: 0 }
+                ],
+                "Dominios registrados recientemente": [
+                    { dominio: "api-taboola.com", solicitudes: 5, bloqueos: 0 },
+                    { dominio: "enjoybernabeumarket.com", solicitudes: 5, bloqueos: 0 },
+                    { dominio: "virexof.virexof.shop", solicitudes: 4, bloqueos: 0 },
+                    { dominio: "recursosactimundi.com", solicitudes: 3, bloqueos: 0 },
+                    { dominio: "omogesagom.pro", solicitudes: 2, bloqueos: 0 },
+                    { dominio: "infoadlab.com", solicitudes: 2, bloqueos: 0 },
+                    { dominio: "nonaspreed.pro", solicitudes: 1, bloqueos: 0 },
+                    { dominio: "sharpest-reef-sparkling-summits.lol", solicitudes: 1, bloqueos: 0 },
+                    { dominio: "fleshoutli.pro", solicitudes: 1, bloqueos: 0 },
+                    { dominio: "28qu5w.unrennis.com", solicitudes: 1, bloqueos: 0 }
+                ],
+                "Categorías Bloqueadas (Armas / Sexualmente explícito)": [
+                    { dominio: "blog.tienda-medieval.com", solicitudes: 6, bloqueos: 6 },
+                    { dominio: "cuchilleriamoreno.com", solicitudes: 3, bloqueos: 3 },
+                    { dominio: "www.tienda-medieval.com", solicitudes: 1, bloqueos: 1 },
+                    { dominio: "es.pornhub.com", solicitudes: 1, bloqueos: 1 },
+                    { dominio: "emmtrack.com", solicitudes: 1, bloqueos: 1 }
+                ]
+            }
+        };
+
+        const formatNum = (num) => (num || 0).toLocaleString();
+
+        // 1. Cargar Resumen Ejecutivo
+        document.getElementById('total-header').innerText = formatNum(data.resumen.totalSolicitudes);
+        document.getElementById('total-solicitudes').innerText = formatNum(data.resumen.totalSolicitudes);
+        document.getElementById('categoria-top').innerText = data.resumen.categoriaTop;
+        document.getElementById('categoria-top').title = data.resumen.categoriaTop;
+        document.getElementById('total-bloqueos').innerText = formatNum(data.resumen.totalBloqueos);
+
+        // 2. Generar Gráfico de Barras
+        const maxValor = Math.max(...data.categorias.map(c => c.valor)) || 1;
+        const barContainer = document.getElementById('bar-chart-container');
+        data.categorias.forEach(cat => {
+            const widthPct = ((cat.valor || 0) / maxValor) * 100;
+            const barHTML = `
+                <div class="flex items-center">
+                    <div class="w-40 sm:w-56 text-xs sm:text-sm font-medium text-gray-600 truncate pr-2" title="${cat.nombre}">
+                        <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${cat.colorHex}"></span>
+                        ${cat.nombre}
+                    </div>
+                    <div class="flex-1 flex items-center">
+                        <div class="w-full bg-gray-100 rounded-full h-3 mr-4">
+                            <div class="h-3 rounded-full transition-all duration-1000" style="width: ${widthPct}%; background-color: ${cat.colorHex}"></div>
+                        </div>
+                        <span class="text-xs sm:text-sm font-bold text-gray-700 w-12 text-right">
+                            ${formatNum(cat.valor)}
+                        </span>
+                    </div>
+                </div>
+            `;
+            barContainer.insertAdjacentHTML('beforeend', barHTML);
+        });
+
+        // 3. Generar Gráfico de Tarta (SVG)
+        const pieContainer = document.getElementById('pie-chart-container');
+        const totalPie = data.categorias.reduce((sum, cat) => sum + (cat.valor || 0), 0);
+        let currentAngle = 0;
+        let svgContent = '';
+        data.categorias.forEach((cat, index) => {
+            if(totalPie === 0 || cat.valor === 0) return;
+            const angle = (cat.valor / totalPie) * 360;
+            const porcentaje = ((cat.valor / totalPie) * 100).toFixed(1);
+            const startAngle = currentAngle;
+            const endAngle = currentAngle + angle;
+            currentAngle += angle;
+
+            if (angle >= 359.9) {
+                svgContent += `<circle cx="50" cy="50" r="50" fill="${cat.colorHex}" onmousemove="showTooltip(event, '${cat.nombre}', ${cat.valor}, '${cat.colorHex}', '${porcentaje}')" onmouseout="hideTooltip()"/>`;
+                return;
+            }
+
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
+
+            const startX = (50 + 50 * Math.cos(startRad)).toFixed(2);
+            const startY = (50 + 50 * Math.sin(startRad)).toFixed(2);
+            const endX = (50 + 50 * Math.cos(endRad)).toFixed(2);
+            const endY = (50 + 50 * Math.sin(endRad)).toFixed(2);
+
+            const largeArcFlag = angle > 180 ? 1 : 0;
+            const pathData = `M 50 50 L ${startX} ${startY} A 50 50 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+
+            svgContent += `<path d="${pathData}" fill="${cat.colorHex}" class="hover:opacity-80 transition-opacity cursor-pointer" onmousemove="showTooltip(event, '${cat.nombre}', ${cat.valor}, '${cat.colorHex}', '${porcentaje}')" onmouseout="hideTooltip()"/>`;
+        });
+        pieContainer.innerHTML = `<svg viewBox="0 0 100 100" class="w-64 h-64 mx-auto drop-shadow-md transform -rotate-90">${svgContent}</svg>`;
+
+
+        // ==============================================================
+        // 4. NUEVO: LÓGICA PARA GENERAR LA TABLA DEL TOP 10 GLOBAL
+        // ==============================================================
+        const globalContainer = document.getElementById('global-top-container');
+        
+        // Juntamos todos los dominios de todas las categorías en una sola lista
+        let todosLosDominios = [];
+        for (const [categoria, dominios] of Object.entries(data.topDominios)) {
+            dominios.forEach(item => {
+                todosLosDominios.push({
+                    dominio: item.dominio,
+                    solicitudes: item.solicitudes,
+                    categoria: categoria
+                });
+            });
+        }
+        
+        // Ordenamos la lista de mayor a menor según las solicitudes
+        todosLosDominios.sort((a, b) => b.solicitudes - a.solicitudes);
+        
+        // Nos quedamos solo con los 10 primeros
+        const top10Global = todosLosDominios.slice(0, 10);
+
+        // Construimos la tabla en HTML
+        let globalTableHTML = `
+            <table class="w-full text-left">
+                <thead class="bg-amber-50 text-amber-800 text-xs uppercase font-bold border-b border-amber-100">
+                    <tr>
+                        <th class="px-6 py-4"># Posición</th>
+                        <th class="px-6 py-4">Dominio</th>
+                        <th class="px-6 py-4 text-center">Categoría de Origen</th>
+                        <th class="px-6 py-4 text-right">Solicitudes</th>
+                        <th class="px-6 py-4 text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-amber-50">
+        `;
+        
+        top10Global.forEach((item, index) => {
+            globalTableHTML += `
+                <tr class="hover:bg-amber-50/40 transition-colors">
+                    <td class="px-6 py-4 font-bold text-amber-600 text-lg">#${index + 1}</td>
+                    <td class="px-6 py-4 font-mono text-sm text-gray-900 font-bold break-all">${item.dominio}</td>
+                    <td class="px-6 py-4 text-center"><span class="text-[10px] bg-gray-100 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wider">${item.categoria}</span></td>
+                    <td class="px-6 py-4 text-right font-bold text-gray-700 text-base">${formatNum(item.solicitudes)}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="analyzeDomain('${item.dominio}', '${item.categoria}')" class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded text-[11px] font-bold hover:bg-amber-500 hover:text-white transition-all shadow-sm">
+                            ✨ Analizar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        globalTableHTML += `</tbody></table>`;
+        globalContainer.innerHTML = globalTableHTML;
+        // ==============================================================
+
+
+        // 5. Generar Tablas de Top Dominios Originales (Por categoría)
+        const tablesContainer = document.getElementById('tables-container');
+        for (const [categoria, dominios] of Object.entries(data.topDominios)) {
+            let rowsHtml = '';
+            dominios.forEach((item, idx) => {
+                const bloqueadoHtml = item.bloqueos > 0 
+                    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-red-100 text-red-800">BLOQ</span>` 
+                    : '';
+                
+                rowsHtml += `
+                    <tr class="hover:bg-gray-50 transition-colors group">
+                        <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-900 font-medium flex items-center space-x-1">
+                            <span class="text-gray-400 w-4">${idx + 1}.</span>
+                            <span class="truncate max-w-[120px] sm:max-w-[150px] block" title="${item.dominio}">${item.dominio}</span>
+                            ${bloqueadoHtml}
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-600 text-right">
+                            ${formatNum(item.solicitudes)}
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap text-right">
+                            <button onclick="analyzeDomain('${item.dominio}', '${categoria}')" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded text-[10px] font-semibold transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-100" title="Investigar dominio con IA">
+                                IA ✨
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const tableHtml = `
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <h3 class="font-bold text-gray-800 text-sm truncate" title="${categoria}">${categoria}</h3>
+                    </div>
+                    <div class="p-0 flex-1 overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-white">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dominio</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Peticiones</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-100">
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            tablesContainer.insertAdjacentHTML('beforeend', tableHtml);
+        }
+    } // Fin de generarInforme()
+
+    // Funciones Globales para Tooltips e IA
+    const tooltip = document.getElementById('chart-tooltip');
+    function showTooltip(e, nombre, valor, color, porcentaje) {
+        tooltip.classList.remove('hidden');
+        tooltip.style.left = e.clientX + 'px';
+        tooltip.style.top = (e.clientY - 15) + 'px';
+        document.getElementById('tooltip-color').style.backgroundColor = color;
+        document.getElementById('tooltip-name').innerText = nombre;
+        document.getElementById('tooltip-value').innerText = `${formatNum(valor)} peticiones (${porcentaje}%)`;
+    }
+    function hideTooltip() {
+        tooltip.classList.add('hidden');
+    }
+
+    const modal = document.getElementById('ai-modal');
+    const modalLoading = document.getElementById('modal-loading');
+    const modalContent = document.getElementById('modal-content');
+    
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modalContent.innerHTML = '';
+    }
+
+    async function analyzeDomain(dominio, categoria) {
+        document.getElementById('modal-domain-name').innerText = dominio;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modalLoading.classList.remove('hidden');
+        modalLoading.classList.add('flex');
+        modalContent.classList.add('hidden');
+
+        const systemPrompt = "Eres un analista de redes y seguridad de TI corporativo.";
+        const userPrompt = `Dime brevemente qué es el dominio "${dominio}" (que aparece en nuestra categoría de "${categoria}"). ¿Es común encontrar este dominio en el entorno laboral? ¿Supone algún riesgo de seguridad o fuga de datos? Responde en dos párrafos cortos y fáciles de entender para alguien no técnico.`;
+
+        const apiKey = ""; // La API key se inyecta automáticamente en este entorno
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        const payload = {
+            contents: [{ parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] }
+        };
+
+        let retries = 5;
+        let delay = 1000;
+        let responseText = "Error al conectar con la IA.";
+
+        while (retries > 0) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No se generó respuesta.";
+                break; 
+            } catch (error) {
+                retries--;
+                if (retries === 0) break;
+                await new Promise(res => setTimeout(res, delay));
+                delay *= 2; 
+            }
+        }
+
+        modalLoading.classList.add('hidden');
+        modalLoading.classList.remove('flex');
+        modalContent.innerText = responseText;
+        modalContent.classList.remove('hidden');
+    }
+    </script>
+</body>
+</html>
